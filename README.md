@@ -13,6 +13,21 @@ be in your PATH to work.
 ln -sf $PWD/git-remote-k8s.sh $HOME/bin/git-remote-k8s
 ```
 
+## Prerequisites
+
+You must have access to a kubernetes cluster using kubectl where you can provision a
+persistent volume somehow and bind it to a claim.  If you can "create a new PVC for a pod",
+you're probably good to go.  If you instead get a pending claim forever, you will need
+to setup a volume provider which can do dynamic provisioning.  I've been using longhorn
+lately since it has very simple backups.  I have been very happy with it but YMMV.  k3s
+also comes with a local dynamic provisioner and that would also work.
+
+## WARNING
+
+If you use this with minikube or similar and then delete your cluster, you will lose the
+git repo stored in the volume!  Use with caution in non-prod environments.  And use caution
+in prod, too!  Don't forget backups.
+
 ## Usage
 
 The URL format for `git-remote-k8s` is `k8s://kubectl-context/namespace/pvc`.
@@ -39,4 +54,3 @@ Adding a remote:
 ```bash
 git remote add origin k8s//context/namespace/pvc
 ```
-
