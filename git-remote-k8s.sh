@@ -23,7 +23,7 @@ export IMAGE=alpine/git:latest
 export CONTEXT="$(echo "${2#*://}" | cut -d / -f 1)"
 export NS="$(echo "${2#*://}" | cut -d / -f 2)"
 export REPO="$(echo "${2#*://}" | cut -d / -f 3)"
-export RUNID="$(uuid)"
+export RUNID="$(dd if=/dev/random bs=600 count=1 status=none | base64 | tr -dc a-z0-9 | cut -c 1-6)"
 
 while read -r cmd arg rest; do
     case "$cmd" in
@@ -53,6 +53,7 @@ read
 echo
 $SUBCOMMAND
 "
+# if you named your pod FILTERME_HFOIQJF, I apologize
 
 echo '
 ---
@@ -67,13 +68,13 @@ spec:
   resources:
     requests:
       storage: 1Gi
-  storageClassName: longhorn
+  storageClassName: ${GIT_REMOTE_K8S_STORAGECLASS-FILTERME_HFOIQJF}
   volumeMode: Filesystem
 ---
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: ${REPO}-git-connector-${RUNID}
+  name: ${REPO}-gitc${RUNID}
   namespace: ${NS}
   labels:
     git.kn8v.com/runid: ${RUNID}
@@ -98,18 +99,19 @@ spec:
         persistentVolumeClaim:
           claimName: ${REPO}
       restartPolicy: Never
-' | yq ea '(.. | select(tag == "!!str")) |= envsubst' | kubectl --context "$CONTEXT" apply -f - 1>&2
+' | grep -v FILTERME_HFOIQJF | yq ea '(.. | select(tag == "!!str")) |= envsubst' | kubectl --context "$CONTEXT" apply -f - 1>&2
+
 KILLLOGS=:
 
 finalize() {
-  kubectl --context "$CONTEXT" delete job -n "$NS" "${REPO}-git-connector-${RUNID}" 1>&2
+  kubectl --context "$CONTEXT" delete job -n "$NS" "${REPO}-gitc${RUNID}" 1>&2
   $KILLLOGS
   exit  # must exit for INT and TERM.
 }
 trap finalize INT TERM
 
-kubectl --context "$CONTEXT" wait job "${REPO}-git-connector-${RUNID}" --for jsonpath=.status.ready=1 1>&2
-(echo;cat) | kubectl --context "$CONTEXT" attach -i -q -n "$NS" "job/${REPO}-git-connector-${RUNID}"
+kubectl --context "$CONTEXT" wait job "${REPO}-gitc${RUNID}" --for jsonpath=.status.ready=1 1>&2
+(echo;cat) | kubectl --context "$CONTEXT" attach -i -q -n "$NS" "job/${REPO}-gitc${RUNID}"
 
 # also finalize on exit
 finalize
