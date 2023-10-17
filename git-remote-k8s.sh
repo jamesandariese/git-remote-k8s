@@ -18,6 +18,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 set -e
 
+if [ x = x"$GIT_DIR" ];then
+  1>&2 echo "Please see $(dirname "$0")/README.md for instructions"
+  exit 1
+fi
+
 export IMAGE=alpine/git:latest
 
 export CONTEXT="$(echo "${2#*://}" | cut -d / -f 1)"
