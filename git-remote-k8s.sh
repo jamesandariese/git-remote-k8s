@@ -110,6 +110,7 @@ finalize() {
 }
 trap finalize INT TERM
 
+1>&2 echo "waiting for the job to start..."
 kubectl --context "$CONTEXT" wait job "${REPO}-gitc${RUNID}" --for jsonpath=.status.ready=1 1>&2
 (echo;cat) | kubectl --context "$CONTEXT" attach -i -q -n "$NS" "job/${REPO}-gitc${RUNID}"
 
